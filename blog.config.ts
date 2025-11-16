@@ -43,9 +43,9 @@ export const blogConfig = {
 
   // 소셜 미디어 링크 (직접 수정하세요)
   social: {
-    github: "https://github.com/ys05059",
-    twitter: "https://twitter.com/yourusername",
-    linkedin: "https://linkedin.com/in/yourusername",
+    github: "https://github.com/wooongyee",
+    twitter: "",
+    linkedin: "",
   },
 
   // 기능 토글

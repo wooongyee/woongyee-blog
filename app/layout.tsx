@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     title: blogConfig.blog.name,
     description: blogConfig.blog.description,
     creator: blogConfig.social.twitter
-      ? `@${blogConfig.social.twitter.split("/").pop()}`
+      ? `@${blogConfig.social.twitter}`
       : undefined,
   },
 };
