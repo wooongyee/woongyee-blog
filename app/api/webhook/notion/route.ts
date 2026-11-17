@@ -5,11 +5,11 @@
  * 처리 가능한 이벤트:
  * - page.created: 새 페이지 생성 시 → Published면 포스트 + 목록 재검증
  * - page.content_updated: 페이지 내용 업데이트 시 → Published면 포스트 + 목록 재검증
- * - page.properties_updated: 페이지 속성 업데이트 시 (Status 변경 포함) → Published면 포스트 + 목록 재검증
+ * - page.properties_updated: 페이지 속성 업데이트 시 (Status 변경 포함) → Published/Draft 모두 포스트 + 목록 재검증
  * - page.deleted: 페이지 삭제 시 → 목록 재검증
  *
- * Draft 필터링:
- * - Status가 "Published"가 아닌 페이지는 재검증하지 않음
+ * Draft 비공개 전환 처리:
+ * - Status가 "Published"가 아닌 경우 이미지 업로드는 건너뛰고, 기존 발행본 캐시를 무효화하여 비공개 전환을 반영
  * - Draft → Published 전환 시 page.properties_updated 이벤트로 감지
  *
  * Notion Integration 설정:
@@ -73,6 +73,31 @@ function verifySignature(body: string, signature: string, secret: string): boole
     // 길이가 다르면 timingSafeEqual이 에러 발생하므로 일반 비교
     return signature === calculatedSignature;
   }
+}
+
+/**
+ * 블로그 포스트 및 목록/사이트맵 캐시를 무효화한다.
+ * slug가 주어지면 개별 포스트 경로(/blog/${slug})도 함께 무효화한다.
+ */
+function revalidatePostCaches(slug?: string): string[] {
+  const revalidated: string[] = [];
+
+  if (slug) {
+    const postPath = `/blog/${slug}`;
+    revalidatePath(postPath);
+    console.log(`Successfully revalidated ${postPath}`);
+    revalidated.push(postPath);
+  }
+
+  revalidateTag('posts');
+  console.log('Successfully revalidated posts tag');
+  revalidated.push('tag:posts');
+
+  revalidatePath('/sitemap.xml');
+  console.log('Successfully revalidated sitemap');
+  revalidated.push('/sitemap.xml');
+
+  return revalidated;
 }
 
 export async function POST(request: NextRequest) {
@@ -140,23 +165,20 @@ export async function POST(request: NextRequest) {
 
           // 삭제된 페이지는 정보를 가져올 수 없으므로 전체 목록만 재검증
           try {
-            revalidateTag('posts');
-            console.log('Successfully revalidated posts tag');
-
-            // Sitemap도 재검증 (삭제된 포스트 sitemap에서 제거)
-            revalidatePath('/sitemap.xml');
-            console.log('Successfully revalidated sitemap');
+            const revalidated = revalidatePostCaches();
+            return {
+              success: true,
+              type: 'deleted',
+              pageId,
+              revalidated,
+            };
           } catch (error) {
             console.error('Revalidation error:', error);
-            return { error: 'Revalidation failed', details: error instanceof Error ? error.message : 'Unknown error' };
+            return {
+              error: 'Revalidation failed',
+              details: error instanceof Error ? error.message : 'Unknown error',
+            };
           }
-
-          return {
-            success: true,
-            type: 'deleted',
-            pageId,
-            revalidated: ['tag:posts'],
-          };
         }
 
         // 페이지 생성/업데이트 이벤트 처리
@@ -177,16 +199,26 @@ export async function POST(request: NextRequest) {
 
         const { slug, isPublished } = pageInfo;
 
-        // Draft 상태면 skip (Published가 아니면 처리하지 않음)
+        // Draft/비공개 상태면 이미지 업로드는 건너뛰고 기존 발행본 캐시만 무효화
         if (!isPublished) {
-          console.log(`Page ${pageId} is not published (Draft) - skipping revalidation`);
-          return {
-            success: true,
-            type: event.type,
-            pageId,
-            skipped: true,
-            reason: 'Page is not published'
-          };
+          console.log(`Page ${pageId} is not published (Draft) - revalidating caches to unpublish`);
+          try {
+            const revalidated = revalidatePostCaches(slug);
+            return {
+              success: true,
+              type: event.type,
+              pageId,
+              slug,
+              unpublished: true,
+              revalidated,
+            };
+          } catch (error) {
+            console.error('Revalidation error:', error);
+            return {
+              error: 'Revalidation failed',
+              details: error instanceof Error ? error.message : 'Unknown error',
+            };
+          }
         }
 
         console.log(`Processing published page: ${slug}`);
@@ -201,50 +233,54 @@ export async function POST(request: NextRequest) {
           // 이미지 처리 실패해도 revalidation은 계속 진행
         }
 
-        // 해당 블로그 포스트 페이지 재검증
+        // 해당 블로그 포스트 페이지, 목록 및 사이트맵 재검증
         try {
-          revalidatePath(`/blog/${slug}`);
-          console.log(`Successfully revalidated /blog/${slug}`);
-
-          // 블로그 목록 페이지도 재검증 (새 포스트나 업데이트된 포스트 반영)
-          revalidateTag('posts');
-          console.log('Successfully revalidated posts tag');
-
-          // Sitemap 재검증 (새 포스트 추가/삭제 시 sitemap 업데이트)
-          revalidatePath('/sitemap.xml');
-          console.log('Successfully revalidated sitemap');
+          const revalidated = revalidatePostCaches(slug);
+          return {
+            success: true,
+            type: event.type,
+            pageId,
+            slug,
+            revalidated,
+          };
         } catch (error) {
           console.error('Revalidation error:', error);
-          return { error: 'Revalidation failed', details: error instanceof Error ? error.message : 'Unknown error' };
+          return {
+            error: 'Revalidation failed',
+            details: error instanceof Error ? error.message : 'Unknown error',
+          };
         }
-
-        return {
-          success: true,
-          type: event.type,
-          pageId,
-          slug,
-          revalidated: [`/blog/${slug}`, 'tag:posts'],
-        };
       })
     );
 
     // 결과 요약
-    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success && !r.value.skipped).length;
-    const skipped = results.filter(r => r.status === 'fulfilled' && r.value.skipped).length;
-    const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value.error)).length;
+    const successful = results.filter(
+      (r) => r.status === 'fulfilled' && r.value.success && !('skipped' in r.value && r.value.skipped)
+    ).length;
+    const skipped = results.filter(
+      (r) => r.status === 'fulfilled' && 'skipped' in r.value && r.value.skipped
+    ).length;
+    const failed = results.filter(
+      (r) => r.status === 'rejected' || (r.status === 'fulfilled' && Boolean(r.value.error))
+    ).length;
 
     console.log(`Webhook processing complete: ${successful} successful, ${skipped} skipped (Draft), ${failed} failed`);
 
-    return NextResponse.json({
-      success: true,
-      processed: events.length,
-      results: {
-        successful,
-        skipped,
-        failed,
+    const hasFailures = failed > 0;
+
+    return NextResponse.json(
+      {
+        success: !hasFailures,
+        processed: events.length,
+        results: {
+          successful,
+          skipped,
+          failed,
+        },
+        details: results.map((r) => (r.status === 'fulfilled' ? r.value : { error: r.reason })),
       },
-      details: results.map(r => r.status === 'fulfilled' ? r.value : { error: r.reason }),
-    });
+      { status: hasFailures ? 500 : 200 }
+    );
 
   } catch (error) {
     console.error('Webhook processing error:', error);
