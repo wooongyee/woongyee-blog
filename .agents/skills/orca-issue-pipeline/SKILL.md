@@ -18,8 +18,8 @@ Coordinate end-to-end issue implementation and cross-model PR review using Orca
 - Target issues already exist in `wooongyee/woongyee-blog` (created via
   `create-github-issue` if needed).
 - Default maker/checker pairing (unless the user specifies otherwise):
-  - **Implementer (`Maker`)**: `codex` (runs `build-from-issue` + `create-github-pr`)
-  - **Reviewer (`Checker`)**: `claude` (runs `review-github-pr`)
+  - **Implementer (`Maker`)**: `antigravity` (runs `build-from-issue` + `create-github-pr`; `codex` or `claude` optional when active)
+  - **Reviewer (`Checker`)**: `antigravity` (separate fresh worker running `review-github-pr`; `claude` or `codex` optional for cross-provider review when active)
 
 ## Phase 1: Dispatch Implementation Worker(s)
 
@@ -31,7 +31,7 @@ orca orchestration worker-start \
   --spec "Use the build-from-issue skill to implement GitHub issue #<id> in wooongyee/woongyee-blog, pass npm run verify, and open a PR using create-github-pr. Return the PR number, PR URL, and verification summary via worker_done." \
   --worktree new-child \
   --name issue-<id> \
-  --agent codex
+  --agent antigravity
 ```
 
 Start all independent issue workers in this turn, then **end your turn** so Orca
@@ -42,15 +42,15 @@ wakes you when a worker asks a question or finishes (`worker_done`). Never poll.
 When an implementation worker finishes with PR `#<pr_num>` (and `worker_done`
 reports success):
 
-1. Start a reviewer worker with a different agent (e.g., `claude`) in the
-   current or child worktree (read-only PR inspection via `gh`):
+1. Start a fresh reviewer worker (`antigravity` by default, or `claude`/`codex`
+   when requested) in the current or child worktree (read-only PR inspection
+   via `gh`):
 
 ```bash
 orca orchestration worker-start \
   --spec "Use the review-github-pr skill to review PR #<pr_num> in wooongyee/woongyee-blog against its linked issue Acceptance Criteria. Post the review comment on GitHub and return Verdict (APPROVE or REQUEST_CHANGES) plus any blocking findings via worker_done." \
   --worktree current \
-  --name review-pr-<pr_num> \
-  --agent claude
+  --agent antigravity
 ```
 
 2. End your turn and wait for the reviewer's `worker_done`.
