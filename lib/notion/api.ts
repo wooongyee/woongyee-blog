@@ -3,6 +3,7 @@
  */
 
 import { unstable_cache } from 'next/cache';
+import type { QueryDataSourceResponse } from '@notionhq/client/build/src/api-endpoints';
 import { getNotionClient, getN2MClient, getDataSourceId } from './client';
 import { parsePageToPost, parsePagesToPostMetas } from './parser';
 import { Post, PostMeta, NotionQueryOptions, PaginatedPosts } from './types';
@@ -22,35 +23,47 @@ async function getPublishedPostsInternal(
   options: NotionQueryOptions = {}
 ): Promise<PostMeta[]> {
   try {
+    const limit = options.limit;
+    if (limit !== undefined && limit <= 0) {
+      return [];
+    }
+
     const notion = getNotionClient();
     const dataSourceId = await getDataSourceId();
+    const results: QueryDataSourceResponse['results'] = [];
+    let startCursor: string | undefined;
 
-    const response = await notion.dataSources.query({
-      data_source_id: dataSourceId,
-      filter: {
-        property: blogConfig.notion.propertyMapping.status,
-        select: {
-          equals: blogConfig.notion.publishedStatus,
+    do {
+      const response = await notion.dataSources.query({
+        data_source_id: dataSourceId,
+        filter: {
+          property: blogConfig.notion.propertyMapping.status,
+          select: {
+            equals: blogConfig.notion.publishedStatus,
+          },
         },
-      },
-      sorts: [
-        {
-          property: blogConfig.notion.propertyMapping.publishDate,
-          direction: 'descending',
-        },
-      ],
-      page_size: options.limit || 100,
-    });
+        sorts: [
+          {
+            property: blogConfig.notion.propertyMapping.publishDate,
+            direction: 'descending',
+          },
+        ],
+        page_size: limit === undefined ? 100 : Math.min(100, limit - results.length),
+        start_cursor: startCursor,
+      });
+
+      results.push(...response.results);
+      startCursor = response.has_more ? response.next_cursor ?? undefined : undefined;
+    } while (startCursor && (limit === undefined || results.length < limit));
 
     // v5 API: results에는 pages와 data sources가 혼재될 수 있음
     // Page 객체만 필터링
-    const pageResults = response.results.filter(
+    const pageResults = results.filter(
       (result): result is typeof result & { object: 'page' } =>
         'object' in result && result.object === 'page'
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const posts = await parsePagesToPostMetas(pageResults as any);
+    const posts = await parsePagesToPostMetas(pageResults);
 
     // 필터링
     let filteredPosts = posts;
