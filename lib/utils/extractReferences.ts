@@ -64,12 +64,65 @@ function extractLinks(node: Element, references: Reference[], depth = 0, maxDept
   }
 }
 
+const LINK_CONTAINER_TAGS = new Set([
+  'p',
+  'ul',
+  'ol',
+  'li',
+  'strong',
+  'em',
+  'del',
+  's',
+  'span',
+  'div',
+]);
+
 /**
- * HTML에서 "참고" 섹션 추출하고 제거하는 rehype plugin
+ * Element가 링크 외의 비-링크 콘텐츠(설명 문단, 비-링크 요소 등)를 포함하는지 확인
+ */
+function hasNonLinkContent(node: Element, depth = 0, maxDepth = 500): boolean {
+  if (depth > maxDepth) return false;
+
+  // href가 있는 <a> 태그 내부는 순수 링크 콘텐츠로 간주
+  if (node.tagName === 'a' && node.properties?.href) {
+    return false;
+  }
+
+  if (node.tagName === 'br') {
+    return false;
+  }
+
+  // 링크를 감싸는 컨테이너 태그 외의 요소(코드 블록, 이미지, 인용구 등)는 비-링크 콘텐츠
+  if (!LINK_CONTAINER_TAGS.has(node.tagName)) {
+    return true;
+  }
+
+  for (const child of node.children) {
+    if (child.type === 'text') {
+      if ((child as Text).value.trim().length > 0) {
+        return true;
+      }
+    } else if (child.type === 'element') {
+      if (hasNonLinkContent(child as Element, depth + 1, maxDepth)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+interface ReferenceSection {
+  nodeIndices: number[];
+  hasNonLinkContent: boolean;
+}
+
+/**
+ * HTML에서 "참고" 섹션 추출하고 순수 링크 섹션만 제거하는 rehype plugin
  *
- * 1. h2/h3 중 "참고" 텍스트를 가진 heading 찾기
+ * 1. h1/h2/h3 중 "참고" 텍스트를 가진 heading 찾기
  * 2. 해당 heading부터 다음 heading 전까지의 모든 링크 수집
- * 3. 해당 섹션 전체를 DOM에서 제거
+ * 3. 비-링크 설명 문단/요소가 없는 순수 링크 섹션만 DOM에서 제거
  */
 export function rehypeExtractReferences(references: Reference[]): Plugin<[], Root> {
   return () => {
@@ -77,10 +130,10 @@ export function rehypeExtractReferences(references: Reference[]): Plugin<[], Roo
       if (!tree || !tree.children) return;
 
       const parent = tree as Parent;
-      const nodesToRemove: number[] = [];
-      let inReferenceSection = false;
+      const sections: ReferenceSection[] = [];
+      let currentSection: ReferenceSection | null = null;
 
-      // 1단계: "참고" 섹션 찾기 및 링크 수집
+      // 1단계: "참고" 섹션 찾기, 링크 수집 및 비-링크 콘텐츠 여부 판별
       for (let i = 0; i < parent.children.length; i++) {
         const node = parent.children[i];
 
@@ -93,28 +146,40 @@ export function rehypeExtractReferences(references: Reference[]): Plugin<[], Roo
           const text = extractText(element);
 
           // 이전 참고 섹션 종료
-          if (inReferenceSection) {
-            inReferenceSection = false;
+          if (currentSection) {
+            sections.push(currentSection);
+            currentSection = null;
           }
 
           // 새로운 참고 섹션 시작
           if (isReferenceHeading(text)) {
-            inReferenceSection = true;
-            nodesToRemove.push(i); // heading 제거
+            currentSection = {
+              nodeIndices: [i],
+              hasNonLinkContent: false,
+            };
             continue;
           }
         }
 
         // 참고 섹션 내부의 노드 처리
-        if (inReferenceSection) {
-          // 링크 수집
+        if (currentSection) {
           extractLinks(element, references);
-          // 제거 대상에 추가
-          nodesToRemove.push(i);
+          if (hasNonLinkContent(element)) {
+            currentSection.hasNonLinkContent = true;
+          }
+          currentSection.nodeIndices.push(i);
         }
       }
 
-      // 2단계: 노드 제거 (뒤에서부터 제거해야 인덱스 안 꼬임)
+      if (currentSection) {
+        sections.push(currentSection);
+      }
+
+      // 2단계: 순수 링크만 있는 섹션만 DOM에서 제거 (뒤에서부터 제거해야 인덱스 안 꼬임)
+      const nodesToRemove = sections
+        .filter((section) => !section.hasNonLinkContent)
+        .flatMap((section) => section.nodeIndices);
+
       for (let i = nodesToRemove.length - 1; i >= 0; i--) {
         parent.children.splice(nodesToRemove[i], 1);
       }
