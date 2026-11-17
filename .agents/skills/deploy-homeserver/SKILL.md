@@ -1,43 +1,60 @@
 ---
 name: deploy-homeserver
 description: >-
-  Deploy wooongyee-blog to the ys-home server via seedops after PRs are merged
-  to main, and verify https://blog.woongyee.com health. Trigger keywords -
-  deploy blog, deploy homeserver, seedops deploy, 홈서버 배포.
+  Monitor or trigger GitHub Actions CD deployment to the ys-home self-hosted
+  runner, inspect Docker/runner health, and verify https://blog.woongyee.com.
+  Trigger keywords - deploy blog, deploy homeserver, actions deploy, 홈서버 배포.
 ---
 
 # Deploy Homeserver (`ys-home`)
 
-Deploy `wooongyee-blog` from `main` to the home server container stack using
-`seedops` MCP / CLI.
+`woongyee-blog` deploys automatically to `ys-home` via GitHub Actions
+(`.github/workflows/deploy.yml`) whenever commits are pushed/merged to `main`.
 
-## Pre-Deployment Checklist
+## Normal CD Flow (GitHub Actions + Self-Hosted Runner)
 
-1. Confirm the target changes are merged into `origin/main` and CI passed:
-   ```bash
-   gh run list --repo wooongyee/woongyee-blog --branch main --limit 3
-   ```
-2. Verify `Dockerfile` and `docker-compose.prod.yml` match expected build args
-   and runtime environment variables (`NOTION_API_KEY`, `NOTION_DATABASE_ID`,
-   `CLOUDINARY_*`, `NEXT_PUBLIC_BLOG_URL=https://blog.woongyee.com`).
-3. Confirm user approval before executing a production rebuild/restart if not
-   already explicitly requested.
+1. Merging a PR into `main` triggers `.github/workflows/deploy.yml`:
+   - `verify` (`ubuntu-latest`): `npm run verify` + `npm run build`
+   - `deploy` (`[self-hosted, linux, x64, ys-home]`): runs `docker compose --project-name woongyee-blog --env-file /home/ys050/workspace/woongyee-blog/.env -f docker-compose.prod.yml up -d --build --wait` and verifies health + public URLs
+   - `notify` (`ubuntu-latest`, `if: always()`): posts success/failure details to Slack when `secrets.SLACK_WEBHOOK_URL` is configured
+2. Monitor the latest run from CLI:
 
-## Deployment Procedure
+```bash
+gh run list --repo wooongyee/woongyee-blog --workflow deploy.yml --limit 5
+gh run watch <run-id> --repo wooongyee/woongyee-blog
+```
 
-1. Use the `seedops` MCP server (`https://ops.woongyee.com/mcp`) to inspect the
-   `ys-home` host and existing `woongyee-blog` service/compose status.
-2. Pull the latest `main` on the deployment directory, rebuild, and recreate the
-   container using `docker-compose.prod.yml` (preserving `.env` secrets on the
-   host; never overwrite or print secrets).
-3. Wait for the Docker healthcheck (`http://127.0.0.1:3000/api/webhook/notion`)
-   to report `healthy`.
+## Manual Trigger / Re-deploy
+
+Trigger `deploy.yml` on `main` without a new commit:
+
+```bash
+gh workflow run deploy.yml --repo wooongyee/woongyee-blog --ref main
+```
 
 ## Post-Deployment Verification
 
-1. Verify external HTTPS endpoint and key routes:
-   - `https://blog.woongyee.com` (HTTP 200)
-   - `https://blog.woongyee.com/blog` (HTTP 200)
-   - `https://blog.woongyee.com/test` (HTTP 404 in production)
-2. Report the deployed commit SHA, container health state, and HTTP check
-   results to the user.
+Confirm live public routes if checking manually:
+
+- `https://blog.woongyee.com` (HTTP 200)
+- `https://blog.woongyee.com/blog` (HTTP 200)
+- `https://blog.woongyee.com/sitemap.xml` (HTTP 200)
+- `https://blog.woongyee.com/test` (HTTP 404 in production)
+
+## Troubleshooting `ys-home` Runner or Docker
+
+If `deploy` fails or queues indefinitely:
+
+1. Check GitHub runner registration status:
+   ```bash
+   gh api repos/wooongyee/woongyee-blog/actions/runners --jq '.runners[] | {name, status, busy, labels: [.labels[].name]}'
+   ```
+2. Check runner service and Docker status on `ys-home`:
+   ```bash
+   ssh ys-home "wsl -d Ubuntu-24.04 -- bash -s" <<'EOF'
+   systemctl --user status actions-runner-woongyee-blog.service --no-pager
+   docker ps --filter name=woongyee-blog --format 'table {{.Names}}\t{{.Status}}'
+   docker logs --tail 50 woongyee-blog
+   EOF
+   ```
+3. Never overwrite or print `/home/ys050/workspace/woongyee-blog/.env` secrets.

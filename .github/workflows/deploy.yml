@@ -1,0 +1,107 @@
+name: Deploy to Homeserver
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - name: Next.js production build check
+        env:
+          NEXT_PUBLIC_BLOG_URL: https://blog.woongyee.com
+        run: npm run build
+
+  deploy:
+    needs: verify
+    runs-on: [self-hosted, linux, x64, ys-home]
+    env:
+      PROD_ENV_FILE: /home/ys050/workspace/woongyee-blog/.env
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight checks on ys-home
+        run: |
+          test -f "$PROD_ENV_FILE"
+          docker info >/dev/null
+          docker network inspect woongyee-blog_external >/dev/null 2>&1 || docker network create woongyee-blog_external
+
+      - name: Build and recreate woongyee-blog container
+        run: |
+          docker compose \
+            --project-name woongyee-blog \
+            --env-file "$PROD_ENV_FILE" \
+            -f docker-compose.prod.yml \
+            up -d --build --wait
+
+      - name: Verify container health and public endpoints
+        run: |
+          health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' woongyee-blog)"
+          echo "Container health: $health"
+          test "$health" = "healthy"
+          for path in "/" "/blog" "/sitemap.xml"; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' "https://blog.woongyee.com${path}")"
+            echo "https://blog.woongyee.com${path} -> HTTP ${code}"
+            test "$code" = "200"
+          done
+          test_code="$(curl -sS -o /dev/null -w '%{http_code}' "https://blog.woongyee.com/test")"
+          echo "https://blog.woongyee.com/test -> HTTP ${test_code}"
+          test "$test_code" = "404"
+
+      - name: Prune dangling Docker images
+        if: success()
+        run: docker image prune -f
+
+  notify:
+    needs: [verify, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      VERIFY_RESULT: ${{ needs.verify.result }}
+      DEPLOY_RESULT: ${{ needs.deploy.result }}
+      COMMIT_SHA: ${{ github.sha }}
+      ACTOR: ${{ github.actor }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      COMMIT_MSG: ${{ github.event.head_commit.message }}
+    steps:
+      - name: Send Slack notification (if configured)
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "SLACK_WEBHOOK_URL secret is not configured; skipping Slack notification."
+            exit 0
+          fi
+
+          if [ "$VERIFY_RESULT" = "success" ] && [ "$DEPLOY_RESULT" = "success" ]; then
+            STATUS_LINE="🟢 *[woongyee-blog] 홈서버 배포 성공*"
+          else
+            STATUS_LINE="🔴 *[woongyee-blog] 홈서버 배포 실패* (verify: ${VERIFY_RESULT}, deploy: ${DEPLOY_RESULT})"
+          fi
+
+          SUMMARY="${COMMIT_MSG%%$'\n'*}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+
+          PAYLOAD="$(jq -n \
+            --arg status "$STATUS_LINE" \
+            --arg sha "$SHORT_SHA" \
+            --arg actor "$ACTOR" \
+            --arg summary "${SUMMARY:-manual workflow_dispatch}" \
+            --arg url "$RUN_URL" \
+            '{
+              text: ($status + "\n• 커밋: `" + $sha + "` (" + $actor + ")\n• 내용: " + $summary + "\n• 워크플로우: " + $url)
+            }')"
+
+          curl -fsS -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_WEBHOOK_URL"
