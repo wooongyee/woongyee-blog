@@ -81,23 +81,29 @@ async function getAllBlocks(blockId: string): Promise<NotionBlock[]> {
   const allBlocks: NotionBlock[] = [];
 
   try {
-    // 블록 리스트 가져오기
-    const response = await notion.blocks.children.list({
-      block_id: blockId,
-      page_size: 100,
-    });
+    let startCursor: string | undefined;
 
-    for (const block of response.results) {
-      // Notion API 응답을 NotionBlock 타입으로 캐스팅
-      const notionBlock = block as NotionBlock;
-      allBlocks.push(notionBlock);
+    do {
+      const response = await notion.blocks.children.list({
+        block_id: blockId,
+        page_size: 100,
+        start_cursor: startCursor,
+      });
 
-      // 자식 블록이 있으면 재귀적으로 가져오기
-      if ('has_children' in block && block.has_children) {
-        const childBlocks = await getAllBlocks(block.id);
-        allBlocks.push(...childBlocks);
+      for (const block of response.results) {
+        // Notion API 응답을 NotionBlock 타입으로 캐스팅
+        const notionBlock = block as NotionBlock;
+        allBlocks.push(notionBlock);
+
+        // 자식 블록이 있으면 재귀적으로 가져오기
+        if ('has_children' in block && block.has_children) {
+          const childBlocks = await getAllBlocks(block.id);
+          allBlocks.push(...childBlocks);
+        }
       }
-    }
+
+      startCursor = response.has_more ? response.next_cursor ?? undefined : undefined;
+    } while (startCursor);
 
     return allBlocks;
   } catch (error) {
