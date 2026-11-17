@@ -111,11 +111,11 @@ Orca commands so the user or coordinator can immediately launch work:
    ```bash
    orca orchestration worker-start \
      --spec "Use the build-from-issue skill to implement GitHub issue #<id> in wooongyee/woongyee-blog and open a PR using create-github-pr." \
-     --worktree new-child --name issue-<id> --agent codex
+     --worktree new-child --name issue-<id> --agent antigravity
    ```
 2. **Independent Worktree Handoff (via `orca-cli`)**:
    ```bash
-   orca worktree create --name issue-<id> --no-parent --agent codex \
+   orca worktree create --name issue-<id> --no-parent --agent antigravity \
      --reference https://github.com/wooongyee/woongyee-blog/issues/<id> \
      --prompt "Use the build-from-issue skill to implement GitHub issue #<id>." --json
    ```

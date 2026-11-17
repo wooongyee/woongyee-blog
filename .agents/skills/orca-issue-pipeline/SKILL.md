@@ -18,8 +18,8 @@ Coordinate end-to-end issue implementation and cross-model PR review using Orca
 - Target issues already exist in `wooongyee/woongyee-blog` (created via
   `create-github-issue` if needed).
 - Default maker/checker pairing (unless the user specifies otherwise):
-  - **Implementer (`Maker`)**: `codex` (runs `build-from-issue` + `create-github-pr`)
-  - **Reviewer (`Checker`)**: `claude` (runs `review-github-pr`)
+  - **Implementer (`Maker`)**: `antigravity` (runs `build-from-issue` + `create-github-pr`; alternatively `codex` or `claude` when requested)
+  - **Reviewer (`Checker`)**: `claude` (runs `review-github-pr`; alternatively `antigravity`)
 
 ## Phase 1: Dispatch Implementation Worker(s)
 
@@ -31,7 +31,7 @@ orca orchestration worker-start \
   --spec "Use the build-from-issue skill to implement GitHub issue #<id> in wooongyee/woongyee-blog, pass npm run verify, and open a PR using create-github-pr. Return the PR number, PR URL, and verification summary via worker_done." \
   --worktree new-child \
   --name issue-<id> \
-  --agent codex
+  --agent antigravity
 ```
 
 Start all independent issue workers in this turn, then **end your turn** so Orca
