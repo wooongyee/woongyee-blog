@@ -11,10 +11,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@notionhq/client', () => ({
-  Client: vi.fn(() => ({
-    dataSources: { query: mocks.query },
-    databases: { retrieve: mocks.retrieveDatabase },
-  })),
+  Client: vi.fn(function () {
+    return {
+      dataSources: { query: mocks.query },
+      databases: { retrieve: mocks.retrieveDatabase },
+    };
+  }),
 }));
 
 vi.mock('cloudinary', () => ({
