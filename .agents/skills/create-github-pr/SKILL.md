@@ -38,8 +38,8 @@ Push the current branch to `origin`:
 git push -u origin HEAD
 ```
 
-Create the PR matching `.github/pull_request_template.md` **in Korean** and always
-include `Closes #<id>` when closing an issue:
+Create the PR matching `.github/pull_request_template.md` **in Korean**.
+Always structure the PR body so a reader understands **what the original bug/problem was and why the change was needed first**, followed by **what was changed**, **verification**, **notes**, and place **`Closes #<id>` at the very bottom** under `## 관련 이슈`:
 
 ```bash
 PR_URL="$(gh pr create \
@@ -47,22 +47,28 @@ PR_URL="$(gh pr create \
   --base main \
   --title "<type>(scope): <간결한 한국어 요약>" \
   --body "$(cat <<'EOF'
-## 관련 이슈
+## 배경 및 문제 상황
 
-Closes #<id>
+- **기존 문제**: <애초에 어떤 버그/한계가 있었고 어떤 조건에서 발생했는지>
+- **작업 이유 (영향)**: <이 문제 때문에 사용자/운영에 어떤 영향이 있어 이번 작업을 진행했는지>
 
-## 변경 요약
+## 해결 방법 및 변경 내용
 
-- <변경 내용과 이유>
+- <원인을 어떻게 해결했는지 핵심 동작/설계 요약>
+- <주요 수정 파일 및 추가된 테스트 파일 요약>
 
 ## 검증 내역
 
-- [x] `npm run verify` (`eslint`, `tsc --noEmit`, `vitest run` — <N>개 통과)
+- [x] `npm run verify` (`eslint`, `tsc --noEmit --incremental false`, `vitest run` — <N>개 통과)
 - [ ] <추가 라우트/수동 확인 내역>
 
 ## 참고 / 제한사항
 
 - <남은 제약사항 또는 "없음">
+
+## 관련 이슈
+
+Closes #<id>
 EOF
 )")"
 echo "$PR_URL"
