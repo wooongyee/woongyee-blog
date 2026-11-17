@@ -1,22 +1,32 @@
 ---
 name: deploy-homeserver
 description: >-
-  Monitor or trigger GitHub Actions CD deployment to the ys-home self-hosted
-  runner, inspect Docker/runner health, and verify https://blog.woongyee.com.
-  Trigger keywords - deploy blog, deploy homeserver, actions deploy, 홈서버 배포.
+  Monitor, approve, or trigger GitHub Actions Staging -> Production CD
+  deployment on the ys-home self-hosted runner, inspect Docker/runner health,
+  and verify staging and https://blog.woongyee.com. Trigger keywords - deploy
+  blog, deploy homeserver, actions deploy, staging deploy, 홈서버 배포.
 ---
 
 # Deploy Homeserver (`ys-home`)
 
-`woongyee-blog` deploys automatically to `ys-home` via GitHub Actions
-(`.github/workflows/deploy.yml`) whenever commits are pushed/merged to `main`.
+`woongyee-blog` follows **GitHub Flow + Build-Once Staging → Production
+Approval Gate** (`.github/workflows/deploy.yml`, documented in
+`docs/DEPLOYMENT_PIPELINE.md`).
 
-## Normal CD Flow (GitHub Actions + Self-Hosted Runner)
+## Normal CD Flow
 
 1. Merging a PR into `main` triggers `.github/workflows/deploy.yml`:
    - `verify` (`ubuntu-latest`): `npm run verify` + `npm run build`
-   - `deploy` (`[self-hosted, linux, x64, ys-home]`): runs `docker compose --project-name woongyee-blog --env-file /home/ys050/workspace/woongyee-blog/.env -f docker-compose.prod.yml up -d --build --wait` and verifies health + public URLs
-   - `notify` (`ubuntu-latest`, `if: always()`): posts success/failure details to Slack when `secrets.SLACK_WEBHOOK_URL` is configured
+   - `deploy-staging` (`[self-hosted, linux, x64, ys-home]`): builds
+     `woongyee-blog:<sha>` once and deploys `woongyee-blog-staging` on
+     `127.0.0.1:3010` (accessible privately via Tailnet at
+     `https://laptop-60dnj58q.tail35561b.ts.net:3010`)
+   - `deploy-prod` (`environment: Production`, requires reviewer `wooongyee`):
+     after manual QA on staging and approval in GitHub Actions, promotes the
+     **exact same `woongyee-blog:<sha>` image** (`--no-build`) to `woongyee-blog`
+     (`https://blog.woongyee.com`)
+   - `notify` (`ubuntu-latest`, `if: always()`): posts status to Slack when
+     `secrets.SLACK_WEBHOOK_URL` is set
 2. Monitor the latest run from CLI:
 
 ```bash
@@ -32,24 +42,22 @@ Trigger `deploy.yml` on `main` without a new commit:
 gh workflow run deploy.yml --repo wooongyee/woongyee-blog --ref main
 ```
 
-## Post-Deployment Verification
+## Verification Endpoints
 
-Confirm live public routes if checking manually:
-
-- `https://blog.woongyee.com` (HTTP 200)
-- `https://blog.woongyee.com/blog` (HTTP 200)
-- `https://blog.woongyee.com/sitemap.xml` (HTTP 200)
-- `https://blog.woongyee.com/test` (HTTP 404 in production)
+- **Staging (Tailnet only)**: `https://laptop-60dnj58q.tail35561b.ts.net:3010`
+- **Production**:
+  - `https://blog.woongyee.com` (HTTP 200)
+  - `https://blog.woongyee.com/blog` (HTTP 200)
+  - `https://blog.woongyee.com/sitemap.xml` (HTTP 200)
+  - `https://blog.woongyee.com/test` (HTTP 404 in production)
 
 ## Troubleshooting `ys-home` Runner or Docker
 
-If `deploy` fails or queues indefinitely:
-
-1. Check GitHub runner registration status:
+1. Check GitHub runner status:
    ```bash
    gh api repos/wooongyee/woongyee-blog/actions/runners --jq '.runners[] | {name, status, busy, labels: [.labels[].name]}'
    ```
-2. Check runner service and Docker status on `ys-home`:
+2. Check runner service and both staging/prod containers on `ys-home`:
    ```bash
    ssh ys-home "wsl -d Ubuntu-24.04 -- bash -s" <<'EOF'
    systemctl --user status actions-runner-woongyee-blog.service --no-pager

@@ -12,6 +12,7 @@ Personal Next.js 15 blog powered by Notion as CMS, Cloudinary for image persiste
 - `blog.config.ts` — Central blog and Notion property mapping configuration.
 - `tests/` — Vitest unit/integration tests (mock external Notion/Cloudinary APIs).
 - `docs/CURRENT_SPEC_AND_IMPROVEMENTS.md` — Baseline technical audit and improvement backlog.
+- `docs/DEPLOYMENT_PIPELINE.md` — Adopted GitHub Flow + Build-Once Staging (`ys-home`) → `Production` approval gate CD strategy.
 
 ## Verification Gates
 

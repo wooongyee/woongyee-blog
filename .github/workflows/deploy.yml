@@ -5,10 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-concurrency:
-  group: deploy-production
-  cancel-in-progress: false
-
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -25,11 +21,15 @@ jobs:
           NEXT_PUBLIC_BLOG_URL: https://blog.woongyee.com
         run: npm run build
 
-  deploy:
+  deploy-staging:
     needs: verify
     runs-on: [self-hosted, linux, x64, ys-home]
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
     env:
       PROD_ENV_FILE: /home/ys050/workspace/woongyee-blog/.env
+      IMAGE_TAG: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,20 +37,71 @@ jobs:
         run: |
           test -f "$PROD_ENV_FILE"
           docker info >/dev/null
-          docker network inspect woongyee-blog_external >/dev/null 2>&1 || docker network create woongyee-blog_external
 
-      - name: Build and recreate woongyee-blog container
+      - name: Build image once (woongyee-blog:${IMAGE_TAG})
         run: |
           docker compose \
             --project-name woongyee-blog \
             --env-file "$PROD_ENV_FILE" \
             -f docker-compose.prod.yml \
-            up -d --build --wait
+            build
 
-      - name: Verify container health and public endpoints
+      - name: Deploy staging container (127.0.0.1:3010)
+        run: |
+          docker compose \
+            --project-name woongyee-blog-staging \
+            --env-file "$PROD_ENV_FILE" \
+            -f docker-compose.staging.yml \
+            up -d --no-build --wait
+
+      - name: Verify staging container health
+        run: |
+          health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' woongyee-blog-staging)"
+          echo "Staging container health: $health"
+          test "$health" = "healthy"
+          for path in "/" "/blog" "/sitemap.xml"; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:3010${path}")"
+            echo "staging http://127.0.0.1:3010${path} -> HTTP ${code}"
+            test "$code" = "200"
+          done
+          test_code="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:3010/test")"
+          echo "staging http://127.0.0.1:3010/test -> HTTP ${test_code}"
+          test "$test_code" = "404"
+
+  deploy-prod:
+    needs: deploy-staging
+    runs-on: [self-hosted, linux, x64, ys-home]
+    environment:
+      name: Production
+      url: https://blog.woongyee.com
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    env:
+      PROD_ENV_FILE: /home/ys050/workspace/woongyee-blog/.env
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight checks for production promotion
+        run: |
+          test -f "$PROD_ENV_FILE"
+          docker image inspect "woongyee-blog:${IMAGE_TAG}" >/dev/null
+          docker network inspect woongyee-blog_external >/dev/null 2>&1 || docker network create woongyee-blog_external
+
+      - name: Promote verified image to production (no rebuild)
+        run: |
+          docker tag "woongyee-blog:${IMAGE_TAG}" "woongyee-blog:latest"
+          docker compose \
+            --project-name woongyee-blog \
+            --env-file "$PROD_ENV_FILE" \
+            -f docker-compose.prod.yml \
+            up -d --no-build --wait
+
+      - name: Verify production container health and public endpoints
         run: |
           health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' woongyee-blog)"
-          echo "Container health: $health"
+          echo "Production container health: $health"
           test "$health" = "healthy"
           for path in "/" "/blog" "/sitemap.xml"; do
             code="$(curl -sS -o /dev/null -w '%{http_code}' "https://blog.woongyee.com${path}")"
@@ -61,18 +112,25 @@ jobs:
           echo "https://blog.woongyee.com/test -> HTTP ${test_code}"
           test "$test_code" = "404"
 
-      - name: Prune dangling Docker images
+      - name: Clean up old woongyee-blog images (keep latest 3 SHA tags)
         if: success()
-        run: docker image prune -f
+        run: |
+          docker image prune -f
+          docker images --format '{{.Repository}}:{{.Tag}}' woongyee-blog \
+            | grep -v ':latest$' \
+            | grep -v "^woongyee-blog:${IMAGE_TAG}$" \
+            | tail -n +3 \
+            | xargs -r docker rmi || true
 
   notify:
-    needs: [verify, deploy]
+    needs: [verify, deploy-staging, deploy-prod]
     if: always()
     runs-on: ubuntu-latest
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       VERIFY_RESULT: ${{ needs.verify.result }}
-      DEPLOY_RESULT: ${{ needs.deploy.result }}
+      STAGING_RESULT: ${{ needs.deploy-staging.result }}
+      PROD_RESULT: ${{ needs.deploy-prod.result }}
       COMMIT_SHA: ${{ github.sha }}
       ACTOR: ${{ github.actor }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -85,10 +143,10 @@ jobs:
             exit 0
           fi
 
-          if [ "$VERIFY_RESULT" = "success" ] && [ "$DEPLOY_RESULT" = "success" ]; then
-            STATUS_LINE="🟢 *[woongyee-blog] 홈서버 배포 성공*"
+          if [ "$VERIFY_RESULT" = "success" ] && [ "$STAGING_RESULT" = "success" ] && [ "$PROD_RESULT" = "success" ]; then
+            STATUS_LINE="🟢 *[woongyee-blog] 프로덕션 배포 완료*"
           else
-            STATUS_LINE="🔴 *[woongyee-blog] 홈서버 배포 실패* (verify: ${VERIFY_RESULT}, deploy: ${DEPLOY_RESULT})"
+            STATUS_LINE="🔴 *[woongyee-blog] 배포 실패/중단* (verify: ${VERIFY_RESULT}, staging: ${STAGING_RESULT}, prod: ${PROD_RESULT})"
           fi
 
           SUMMARY="${COMMIT_MSG%%$'\n'*}"

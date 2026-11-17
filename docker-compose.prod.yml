@@ -1,5 +1,6 @@
 services:
   blog:
+    image: woongyee-blog:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
