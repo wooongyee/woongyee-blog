@@ -6,6 +6,8 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
 import remarkRehype from 'remark-rehype';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema, type Options as SanitizeOptions } from 'rehype-sanitize';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
@@ -54,6 +56,18 @@ export interface MarkdownResult {
 }
 
 /**
+ * Notion 토글(<details>/<summary>)을 허용하면서 위험한 HTML/스크립트를 차단하는 sanitize 스키마
+ */
+const sanitizeSchema: SanitizeOptions = {
+  ...defaultSchema,
+  tagNames: Array.from(new Set([...(defaultSchema.tagNames ?? []), 'details', 'summary'])),
+  attributes: {
+    ...defaultSchema.attributes,
+    details: [...(defaultSchema.attributes?.details ?? []), 'open'],
+  },
+};
+
+/**
  * Markdown을 HTML로 변환하고 heading, references 추출
  */
 export async function markdownToHtml(markdown: string): Promise<MarkdownResult> {
@@ -63,7 +77,9 @@ export async function markdownToHtml(markdown: string): Promise<MarkdownResult> 
   const result = await unified()
     .use(remarkParse) // Markdown 파싱
     .use(remarkGfm) // GitHub Flavored Markdown 지원
-    .use(remarkRehype) // Markdown AST를 HTML AST로 변환
+    .use(remarkRehype, { allowDangerousHtml: true }) // Markdown AST를 HTML AST로 변환 (raw HTML 유지)
+    .use(rehypeRaw) // raw HTML 노드를 HAST 요소로 파싱
+    .use(rehypeSanitize, sanitizeSchema) // 위험한 태그/속성 제거 (후속 플러그인 속성 보호를 위해 먼저 실행)
     .use(rehypeSlug) // 헤딩에 ID 추가
     .use(rehypeAutolinkHeadings, {
       behavior: 'wrap',
