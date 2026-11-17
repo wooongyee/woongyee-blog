@@ -27,9 +27,21 @@ gh label list --repo wooongyee/woongyee-blog --limit 50
 
 ## Extracting Issue Content
 
-Distill the conversation or technical spec (e.g., `docs/CURRENT_SPEC_AND_IMPROVEMENTS.md`)
-into a single coherent, PR-sized issue. If a topic requires multiple PRs, split it
-into separate issues so each PR can close one issue via `Closes #<id>`.
+Distill the conversation, technical spec (e.g., `docs/CURRENT_SPEC_AND_IMPROVEMENTS.md`),
+or user-reported screenshots/UI behavior into a single coherent, PR-sized issue.
+If a topic requires multiple PRs, split it into separate issues so each PR can
+close one issue via `Closes #<id>`.
+
+### Handling Screenshot / UI Behavior Reports
+
+When the user uploads screenshots or describes a UI/interaction bug:
+1. Inspect the relevant `components/`, `hooks/`, `app/`, and `lib/` files first
+   to identify the actual mechanism and suspected lines before drafting the issue.
+2. Capture **실제 동작(Actual)** vs **기대 동작(Expected)** from the screenshots
+   and user description under `## 문제 상황` and `## 재현 방법`.
+3. Note that `gh issue create` cannot directly attach local binary image files as
+   GitHub asset URLs; summarize the visual evidence clearly in Korean text and
+   list exact component/hook file paths under `## 대상 파일 / 범위`.
 
 ### Bug Report (`bug: <한국어 요약>`)
 
