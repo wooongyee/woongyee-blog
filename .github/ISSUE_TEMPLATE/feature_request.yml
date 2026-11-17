@@ -1,0 +1,44 @@
+name: Feature / Improvement Request
+description: Propose a new feature, refactor, or improvement for woongyee-blog
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Summarize the missing capability or limitation today.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact / Why This Matters
+      description: Why this change matters for the blog or authoring workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed Design
+      description: User-visible behavior, API/config contract, and edge cases.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Observable checklist items required to consider this issue done.
+      value: |
+        - [ ] Behavior implemented as specified
+        - [ ] Unit/integration tests added in `tests/` (with mocked external APIs)
+        - [ ] `npm run verify` passes
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Target Files / Scope
+      description: Expected files or directories to modify.
+    validations:
+      required: false

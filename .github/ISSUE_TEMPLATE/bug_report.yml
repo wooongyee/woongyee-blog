@@ -1,0 +1,43 @@
+name: Bug Report
+description: Report a bug or regression in woongyee-blog
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Summarize what is broken or behaving unexpectedly and where it occurs.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Describe the user/operator impact and any current workaround.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: Minimal steps or mocked test scenario to reproduce the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Observable checklist items that prove the bug is fixed.
+      value: |
+        - [ ] Root cause fixed with regression test in `tests/`
+        - [ ] `npm run verify` passes
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Suspected Files / Scope
+      description: Relevant files or modules if known.
+    validations:
+      required: false
