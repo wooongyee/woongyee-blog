@@ -30,6 +30,7 @@ GitHub Issues (`wooongyee/woongyee-blog`) are the single source of truth (SSOT) 
 
 - **Branching**: Never commit or open PRs directly from `main`. Use `feat/<issue-number>-<slug>`, `fix/<issue-number>-<slug>`, or `chore/<issue-number>-<slug>`.
 - **PR Linking**: Every feature/bugfix PR must reference an existing issue with `Closes #<issue-number>`.
+- **Language**: Write GitHub issues, `> **🏗️ build-plan**` comments, PR descriptions, and PR reviews in **Korean** (keep technical identifiers, code symbols, and file paths in English/backticks).
 - **Skills** (`.agents/skills/`):
   - `create-github-issue`: Turn discussions into structured GitHub issues matching `.github/ISSUE_TEMPLATE/`.
   - `build-from-issue`: Plan on the issue (`> **🏗️ build-plan**`), implement, test, run `npm run verify`, and chain to `create-github-pr`.

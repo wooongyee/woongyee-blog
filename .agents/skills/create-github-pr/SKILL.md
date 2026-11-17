@@ -38,31 +38,31 @@ Push the current branch to `origin`:
 git push -u origin HEAD
 ```
 
-Create the PR matching `.github/pull_request_template.md` and always include
-`Closes #<id>` when closing an issue:
+Create the PR matching `.github/pull_request_template.md` **in Korean** and always
+include `Closes #<id>` when closing an issue:
 
 ```bash
 PR_URL="$(gh pr create \
   --repo wooongyee/woongyee-blog \
   --base main \
-  --title "<type>(scope): <concise summary>" \
+  --title "<type>(scope): <간결한 한국어 요약>" \
   --body "$(cat <<'EOF'
-## Related Issue
+## 관련 이슈
 
 Closes #<id>
 
-## Summary
+## 변경 요약
 
-- <what changed and why>
+- <변경 내용과 이유>
 
-## Verification
+## 검증 내역
 
-- [x] `npm run verify` (`eslint`, `tsc --noEmit`, `vitest run` — <N> passed)
-- [ ] <any additional route/manual checks>
+- [x] `npm run verify` (`eslint`, `tsc --noEmit`, `vitest run` — <N>개 통과)
+- [ ] <추가 라우트/수동 확인 내역>
 
-## Notes / Limitations
+## 참고 / 제한사항
 
-- <remaining caveats or "None">
+- <남은 제약사항 또는 "없음">
 EOF
 )")"
 echo "$PR_URL"

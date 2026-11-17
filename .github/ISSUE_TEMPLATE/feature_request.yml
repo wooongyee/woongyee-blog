@@ -1,44 +1,44 @@
-name: Feature / Improvement Request
-description: Propose a new feature, refactor, or improvement for woongyee-blog
+name: Feature / Improvement Request (기능 및 개선 요청)
+description: woongyee-blog의 새 기능, 리팩토링, 개선 작업을 제안합니다
 title: "feat: "
 labels: ["enhancement"]
 body:
   - type: textarea
     id: problem
     attributes:
-      label: Problem Statement
-      description: Summarize the missing capability or limitation today.
+      label: 문제 상황
+      description: 현재 부족한 기능이나 한계를 요약합니다.
     validations:
       required: true
   - type: textarea
     id: impact
     attributes:
-      label: Impact / Why This Matters
-      description: Why this change matters for the blog or authoring workflow.
+      label: 배경 및 기대 효과
+      description: 블로그 독자 경험, 작성 워크플로우, 운영 측면에서 왜 필요한지 적습니다.
     validations:
       required: true
   - type: textarea
     id: design
     attributes:
-      label: Proposed Design
-      description: User-visible behavior, API/config contract, and edge cases.
+      label: 제안 설계
+      description: 사용자에게 보이는 동작, API/설정 계약, 엣지 케이스를 적습니다.
     validations:
       required: true
   - type: textarea
     id: acceptance
     attributes:
-      label: Acceptance Criteria
-      description: Observable checklist items required to consider this issue done.
+      label: 완료 조건 (Acceptance Criteria)
+      description: 완료로 간주하기 위한 검증 가능한 체크리스트입니다.
       value: |
-        - [ ] Behavior implemented as specified
-        - [ ] Unit/integration tests added in `tests/` (with mocked external APIs)
-        - [ ] `npm run verify` passes
+        - [ ] 명세대로 동작 구현
+        - [ ] `tests/` 단위/통합 테스트 추가 (외부 API Mock 처리)
+        - [ ] `npm run verify` 통과
     validations:
       required: true
   - type: textarea
     id: files
     attributes:
-      label: Target Files / Scope
-      description: Expected files or directories to modify.
+      label: 대상 파일 / 범위
+      description: 수정이 예상되는 파일이나 디렉토리를 적습니다.
     validations:
       required: false

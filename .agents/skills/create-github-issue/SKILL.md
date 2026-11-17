@@ -13,6 +13,9 @@ Create clean, actionable GitHub issues on `wooongyee/woongyee-blog` using `gh`.
 GitHub Issues are the single source of truth (SSOT) for work across Antigravity,
 Claude, and Codex; do not create local ticket files (`tasks/`, `backlog.md`).
 
+- Write issue titles and bodies in **Korean** (keep file paths, symbol names,
+  and commands in backticks).
+
 ## Prerequisites
 
 - Verify `gh auth status` is authenticated.
@@ -28,7 +31,7 @@ Distill the conversation or technical spec (e.g., `docs/CURRENT_SPEC_AND_IMPROVE
 into a single coherent, PR-sized issue. If a topic requires multiple PRs, split it
 into separate issues so each PR can close one issue via `Closes #<id>`.
 
-### Bug Report (`bug: <concise summary>`)
+### Bug Report (`bug: <한국어 요약>`)
 
 Match `.github/ISSUE_TEMPLATE/bug_report.yml`:
 
@@ -36,35 +39,35 @@ Match `.github/ISSUE_TEMPLATE/bug_report.yml`:
 gh issue create \
   --repo wooongyee/woongyee-blog \
   --label "bug" \
-  --title "bug: <concise summary>" \
+  --title "bug: <간결한 한국어 요약>" \
   --body "$(cat <<'EOF'
-## Problem Statement
+## 문제 상황
 
-<Summarize what is broken or behaving unexpectedly and where it occurs.>
+<무엇이 잘못 동작하는지, 어느 파일/경로에서 발생하는지 요약합니다.>
 
-## Impact
+## 영향
 
-<Describe the user/operator impact and any current workaround.>
+<사용자/운영자 관점의 영향과 현재 우회 방법을 적습니다.>
 
-## Reproduction Steps
+## 재현 방법
 
-1. <step or mocked test scenario>
-2. <observed vs expected behavior>
+1. <재현 단계 또는 Mock 테스트 시나리오>
+2. <실제 동작 vs 기대 동작>
 
-## Acceptance Criteria
+## 완료 조건 (Acceptance Criteria)
 
-- [ ] <observable condition proving the bug is fixed>
-- [ ] Regression test added in `tests/` (with mocked external APIs)
-- [ ] `npm run verify` passes
+- [ ] <버그 수정 완료를 검증할 수 있는 구체적 조건>
+- [ ] `tests/` 회귀 테스트 추가 (외부 API Mock 처리)
+- [ ] `npm run verify` 통과
 
-## Suspected Files / Scope
+## 대상 파일 / 범위
 
 - `<path/to/file>`
 EOF
 )"
 ```
 
-### Feature / Improvement Request (`feat: <concise summary>`)
+### Feature / Improvement Request (`feat: <한국어 요약>`)
 
 Match `.github/ISSUE_TEMPLATE/feature_request.yml`:
 
@@ -72,27 +75,27 @@ Match `.github/ISSUE_TEMPLATE/feature_request.yml`:
 gh issue create \
   --repo wooongyee/woongyee-blog \
   --label "enhancement" \
-  --title "feat: <concise summary>" \
+  --title "feat: <간결한 한국어 요약>" \
   --body "$(cat <<'EOF'
-## Problem Statement
+## 문제 상황
 
-<Summarize the missing capability or current limitation.>
+<현재 부족한 기능이나 한계를 요약합니다.>
 
-## Impact / Why This Matters
+## 배경 및 기대 효과
 
-<Explain why this improvement matters for readers, authoring, or operations.>
+<독자 경험, 작성 워크플로우, 운영 측면에서 왜 필요한지 적습니다.>
 
-## Proposed Design
+## 제안 설계
 
-<Describe user-visible behavior, API/config contract, and edge cases.>
+<사용자에게 보이는 동작, API/설정 계약, 엣지 케이스를 적습니다.>
 
-## Acceptance Criteria
+## 완료 조건 (Acceptance Criteria)
 
-- [ ] <observable condition required for completion>
-- [ ] Unit/integration tests added in `tests/` (with mocked external APIs)
-- [ ] `npm run verify` passes
+- [ ] <완료로 간주하기 위한 검증 가능한 조건>
+- [ ] `tests/` 단위/통합 테스트 추가 (외부 API Mock 처리)
+- [ ] `npm run verify` 통과
 
-## Target Files / Scope
+## 대상 파일 / 범위
 
 - `<path/to/file>`
 EOF

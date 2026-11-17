@@ -35,20 +35,20 @@ orca worktree set --worktree active --workspace-status in-progress --comment "Is
 ## Step 2: Record or Update the Build Plan
 
 Before editing code (unless a `> **🏗️ build-plan**` already covers the exact
-plan and has no pending changes), post a concise plan comment on the issue:
+plan and has no pending changes), post a concise plan comment **in Korean** on the issue:
 
-- Scope & affected files
-- Implementation approach & edge cases
-- Tests to add in `tests/` (mocking Notion/Cloudinary)
+- 수정 대상 파일 및 범위
+- 구현 방식 및 엣지 케이스
+- `tests/`에 추가할 테스트 계획 (Notion/Cloudinary Mock 처리)
 
 ```bash
 gh issue comment <id> --repo wooongyee/woongyee-blog --body "$(cat <<'EOF'
 > **🏗️ build-plan**
 >
-> - **Branch**: `feat/<id>-<slug>` (or `fix/<id>-<slug>`)
-> - **Affected files**: ...
-> - **Approach**: ...
-> - **Tests**: ...
+> - **브랜치**: `feat/<id>-<slug>` (또는 `fix/<id>-<slug>`)
+> - **수정 파일**: ...
+> - **구현 방향**: ...
+> - **테스트 계획**: ...
 EOF
 )"
 ```

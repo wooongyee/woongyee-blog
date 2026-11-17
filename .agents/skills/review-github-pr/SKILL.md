@@ -64,26 +64,26 @@ Evaluate every item strictly from observed code and diff:
 
 ## Step 4: Publish Review & Return Verdict
 
-Post a structured comment on the PR (or submit a GitHub review when appropriate;
-note GitHub forbids approving your own PR if author == reviewer account, in
-which case post `gh pr comment`):
+Post a structured comment **in Korean** on the PR (or submit a GitHub review
+when appropriate; note GitHub forbids approving your own PR if author ==
+reviewer account, in which case post `gh pr comment`):
 
 ```bash
 gh pr comment <number> --repo wooongyee/woongyee-blog --body "$(cat <<'EOF'
-## Code Review Summary
+## 코드 리뷰 요약
 
 - **PR**: #<number>
-- **Linked Issue**: #<issue_number>
-- **Verdict**: `APPROVE` | `REQUEST_CHANGES`
+- **연결된 이슈**: #<issue_number>
+- **판정 (Verdict)**: `APPROVE` | `REQUEST_CHANGES`
 
-### Acceptance Criteria Audit
-- [x] / [ ] <criterion 1>: <evidence or gap>
+### 완료 조건(Acceptance Criteria) 점검
+- [x] / [ ] <완료 조건 1>: <근거 또는 누락 사항>
 
-### Findings
-- **[Blocker | Major | Minor | Nit]** `<file>:<line>` — <concise explanation & fix>
+### 발견 사항 (Findings)
+- **[Blocker | Major | Minor | Nit]** `<file>:<line>` — <핵심 설명 및 수정 방향>
 
-### Verification Notes
-- <what checks/tests were observed in the diff or run locally>
+### 검증 메모
+- <Diff에서 확인된 테스트 및 로컬 실행 결과>
 EOF
 )"
 ```
