@@ -4,7 +4,9 @@ import { extractAndUploadImages } from '@/lib/notion/images';
 const mocks = vi.hoisted(() => ({ list: vi.fn(), upload: vi.fn(), fetch: vi.fn() }));
 
 vi.mock('@notionhq/client', () => ({
-  Client: vi.fn(() => ({ blocks: { children: { list: mocks.list } } })),
+  Client: vi.fn(function () {
+    return { blocks: { children: { list: mocks.list } } };
+  }),
 }));
 
 vi.mock('cloudinary', () => ({

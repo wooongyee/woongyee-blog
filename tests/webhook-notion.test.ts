@@ -13,9 +13,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@notionhq/client', () => ({
-  Client: vi.fn(() => ({
-    pages: { retrieve: mocks.retrievePage },
-  })),
+  Client: vi.fn(function () {
+    return {
+      pages: { retrieve: mocks.retrievePage },
+    };
+  }),
 }));
 
 vi.mock('cloudinary', () => ({
