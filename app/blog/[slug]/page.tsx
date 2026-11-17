@@ -15,8 +15,11 @@ interface PostPageProps {
   }>;
 }
 
-// 정적 페이지 생성을 위한 slug 목록 반환
+// 정적 페이지 생성을 위한 slug 목록 반환 (빌드 타임에 Notion 자격증명이 없으면 런타임에 생성)
 export async function generateStaticParams() {
+  if (!process.env.NOTION_API_KEY || !process.env.NOTION_DATABASE_ID) {
+    return [];
+  }
   const posts = await getPublishedPosts();
   return posts.map((post) => ({
     slug: post.slug,

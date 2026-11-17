@@ -1,5 +1,5 @@
 {
-  "name": "notion-based-next-blog",
+  "name": "woongyee-blog",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,8 +10,6 @@
   },
   "dependencies": {
     "@notionhq/client": "^5.1.0",
-    "@vercel/analytics": "^1.5.0",
-    "@vercel/og": "^0.8.5",
     "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

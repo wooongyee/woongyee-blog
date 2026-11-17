@@ -111,11 +111,8 @@ export default function AboutPage() {
               <div className="space-y-4">
                 <p className="text-lg text-muted-foreground leading-relaxed">
                   이 블로그는 Notion을 CMS로 사용하여 Next.js로 구축되었습니다.
-                  글 작성은 Notion에서, 배포는 Vercel에서 자동으로 이루어집니다.
-                </p>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  누구나 이 블로그를 포크하여 환경변수만 설정하면 자신만의 블로그를
-                  만들 수 있습니다.
+                  글 작성은 Notion에서 이루어지며, 개인 홈서버에 구축된 컨테이너
+                  인프라를 통해 서비스됩니다.
                 </p>
               </div>
 
@@ -124,7 +121,7 @@ export default function AboutPage() {
                   TECH STACK
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {['Next.js 15', 'Notion API', 'TypeScript', 'Tailwind CSS', 'Vercel'].map(
+                  {['Next.js 15', 'Notion API', 'TypeScript', 'Tailwind CSS', 'Docker'].map(
                     (tech) => (
                       <span
                         key={tech}

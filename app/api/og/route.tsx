@@ -2,11 +2,9 @@
  * OG 이미지 동적 생성 API
  */
 
-import { ImageResponse } from '@vercel/og';
+import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { blogConfig } from '@/blog.config';
-
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   try {

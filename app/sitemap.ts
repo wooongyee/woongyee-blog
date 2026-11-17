@@ -7,6 +7,8 @@ import type { MetadataRoute } from 'next';
 import { getPublishedPosts } from '@/lib/notion';
 import { blogConfig } from '@/blog.config';
 
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await getPublishedPosts();
   const baseUrl = blogConfig.blog.url;

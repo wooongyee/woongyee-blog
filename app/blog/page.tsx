@@ -7,6 +7,8 @@ import { getPublishedPosts } from '@/lib/notion';
 import { PostCard } from '@/components/blog/PostCard';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Blog',
   description: '모든 블로그 포스트',

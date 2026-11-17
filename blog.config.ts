@@ -30,7 +30,10 @@ export const blogConfig = {
   blog: {
     name: "Woongyee's Blog",
     description: "A blog powered by Notion and Next.js",
-    url: process.env.NEXT_PUBLIC_BLOG_URL as string,
+    url:
+      process.env.NEXT_PUBLIC_BLOG_URL ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://blog.woongyee.com",
     language: "ko",
     locale: "ko_KR",
   },

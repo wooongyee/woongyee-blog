@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { getAllTags, getPublishedPosts } from '@/lib/notion';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Tags',
   description: '블로그 태그 목록',

@@ -3,10 +3,15 @@
  * /test 경로로 접속하여 Notion 데이터베이스 연결 확인
  */
 
+import { notFound } from 'next/navigation';
 import { getPublishedPosts, getDataSourceId } from '@/lib/notion';
 import { blogConfig } from '@/blog.config';
 
 export default async function TestPage() {
+  if (process.env.NODE_ENV === 'production') {
+    notFound();
+  }
+
   let posts;
   let dataSourceId;
   let error: string | null = null;

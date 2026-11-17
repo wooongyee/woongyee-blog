@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { getAllCategories, getPublishedPosts } from '@/lib/notion';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Categories',
   description: '블로그 카테고리 목록',

@@ -9,6 +9,8 @@ import { PostCard } from '@/components/blog/PostCard';
 import { blogConfig } from '@/blog.config';
 import { generateWebSiteJsonLd } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   // unstable_cache로 캐싱됨 (blog.config.ts의 revalidate.postList 값 사용)
   const posts = await getPublishedPosts({ limit: blogConfig.homepage.recentPostsCount });
