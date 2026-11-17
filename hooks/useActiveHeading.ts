@@ -6,16 +6,34 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import type { ActiveHeadingSource } from '@/lib/utils/toc';
+
+interface ActiveHeadingState {
+  id: string;
+  source: ActiveHeadingSource;
+}
 
 export function useActiveHeading(headingIds: string[]) {
-  const [activeId, setActiveId] = useState<string>('');
+  const [activeState, setActiveState] = useState<ActiveHeadingState>({
+    id: '',
+    source: 'scroll',
+  });
   const ignoreObserverRef = useRef(false);
   const headingIdsRef = useRef<string[]>([]);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // headingIds를 ref에 저장하여 의존성 문제 해결
   useEffect(() => {
     headingIdsRef.current = headingIds;
   }, [headingIds]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleScroll = useCallback(() => {
     if (ignoreObserverRef.current) return;
@@ -28,7 +46,10 @@ export function useActiveHeading(headingIds: string[]) {
       window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 200;
 
     if (scrolledToBottom) {
-      setActiveId(currentHeadingIds[currentHeadingIds.length - 1]);
+      const bottomId = currentHeadingIds[currentHeadingIds.length - 1];
+      setActiveState((prev) =>
+        prev.id === bottomId ? prev : { id: bottomId, source: 'scroll' }
+      );
       return;
     }
 
@@ -71,7 +92,9 @@ export function useActiveHeading(headingIds: string[]) {
     }
 
     if (closestHeading) {
-      setActiveId(closestHeading);
+      setActiveState((prev) =>
+        prev.id === closestHeading ? prev : { id: closestHeading, source: 'scroll' }
+      );
     }
   }, []);
 
@@ -92,12 +115,21 @@ export function useActiveHeading(headingIds: string[]) {
   // 클릭 시 즉시 반영하고 잠시 자동 감지 중지
   const setActiveIdWithDelay = useCallback((id: string) => {
     ignoreObserverRef.current = true;
-    setActiveId(id);
+    setActiveState({ id, source: 'manual' });
 
-    setTimeout(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
       ignoreObserverRef.current = false;
+      timeoutRef.current = null;
     }, 1000); // 1초 후 자동 감지 재개
   }, []);
 
-  return { activeId, setActiveId: setActiveIdWithDelay };
+  return {
+    activeId: activeState.id,
+    activeSource: activeState.source,
+    setActiveId: setActiveIdWithDelay,
+  };
 }

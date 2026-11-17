@@ -9,15 +9,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useActiveHeading } from '@/hooks/useActiveHeading';
 import type { Heading } from '@/lib/notion/types';
+import {
+  buildHeadingNodes,
+  getVisibleHeadings,
+  resolveExpandedOnActiveChange,
+  toggleExpandedOnClick,
+} from '@/lib/utils/toc';
 
 interface TableOfContentsProps {
   headings: Heading[];
-}
-
-// 계층 구조 정보
-interface HeadingNode extends Heading {
-  parentId: string | null; // 부모 heading의 id
-  hasChildren: boolean; // 자식 heading이 있는지
 }
 
 export function TableOfContents({ headings }: TableOfContentsProps) {
@@ -28,85 +28,25 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
   ], [headings]);
 
   const headingIds = useMemo(() => allHeadings.map((h) => h.id), [allHeadings]);
-  const { activeId, setActiveId } = useActiveHeading(headingIds);
+  const { activeId, activeSource, setActiveId } = useActiveHeading(headingIds);
 
   // 확장된 heading id 목록 관리
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  // 계층 구조 파악: 각 heading의 부모 찾기
-  const headingNodes = useMemo(() => {
-    const nodes: HeadingNode[] = [];
-
-    for (let i = 0; i < allHeadings.length; i++) {
-      const current = allHeadings[i];
-      let parentId: string | null = null;
-
-      // 이전 heading들 중에서 부모 찾기
-      for (let j = i - 1; j >= 0; j--) {
-        const prev = allHeadings[j];
-        // 현재보다 레벨이 낮은(상위) heading을 찾으면 그게 부모
-        if (prev.level < current.level) {
-          parentId = prev.id;
-          break;
-        }
-      }
-
-      // 자식이 있는지 확인
-      const hasChildren = allHeadings.some((h, idx) => {
-        if (idx <= i) return false;
-        // 다음 heading이 현재보다 레벨이 높으면(하위) 자식
-        if (h.level > current.level) return true;
-        // 같거나 낮은 레벨이 나오면 자식 영역 끝
-        return false;
-      });
-
-      nodes.push({
-        ...current,
-        parentId,
-        hasChildren,
-      });
-    }
-
-    return nodes;
-  }, [allHeadings]);
-
-  // 특정 heading의 모든 조상(ancestors) id 배열 반환
-  const getAncestorIds = useMemo(() => {
-    return (headingId: string): string[] => {
-      const ancestors: string[] = [];
-      let currentNode = headingNodes.find(n => n.id === headingId);
-
-      while (currentNode?.parentId) {
-        ancestors.push(currentNode.parentId);
-        currentNode = headingNodes.find(n => n.id === currentNode!.parentId);
-      }
-
-      return ancestors;
-    };
-  }, [headingNodes]);
+  // 계층 구조 파악: 각 heading의 부모 및 자식 유무 계산
+  const headingNodes = useMemo(
+    () => buildHeadingNodes(allHeadings),
+    [allHeadings],
+  );
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
 
-    const node = headingNodes.find(n => n.id === id);
-    if (!node) return;
+    const { shouldScroll } = toggleExpandedOnClick(headingNodes, expandedIds, id);
+    setExpandedIds((prev) => toggleExpandedOnClick(headingNodes, prev, id).expandedIds);
 
-    // 자식이 있는 heading(h1, h2)을 클릭한 경우
-    if (node.hasChildren) {
-      const isCurrentlyExpanded = expandedIds.has(id);
-
-      // 열려있으면 → 닫기만 하고 리턴 (스크롤 이동 없음)
-      if (isCurrentlyExpanded) {
-        setExpandedIds(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(id);
-          return newSet;
-        });
-        return;
-      } else {
-        // 닫혀있으면 → 열기
-        setExpandedIds(prev => new Set(prev).add(id));
-      }
+    if (!shouldScroll) {
+      return;
     }
 
     // 스크롤 이동 (자식이 없거나, 닫혀있던 헤더를 연 경우만 실행)
@@ -128,22 +68,17 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
   // 스크롤로 activeId 변경 시 해당 heading의 조상만 열고 나머지는 닫기
   useEffect(() => {
     if (activeId) {
-      const ancestorIds = getAncestorIds(activeId);
-      setExpandedIds(new Set(ancestorIds));
+      setExpandedIds((prev) =>
+        resolveExpandedOnActiveChange(headingNodes, prev, activeId, activeSource),
+      );
     }
-  }, [activeId, getAncestorIds]);
+  }, [activeId, activeSource, headingNodes]);
 
   // 표시할 heading 필터링: 부모가 없거나 모든 조상이 확장되어 있으면 표시
-  const visibleHeadings = useMemo(() => {
-    return headingNodes.filter(node => {
-      // 부모가 없으면 최상위이므로 항상 표시
-      if (!node.parentId) return true;
-
-      // 모든 조상이 확장되어 있어야 표시
-      const ancestors = getAncestorIds(node.id);
-      return ancestors.every(ancestorId => expandedIds.has(ancestorId));
-    });
-  }, [headingNodes, expandedIds, getAncestorIds]);
+  const visibleHeadings = useMemo(
+    () => getVisibleHeadings(headingNodes, expandedIds),
+    [headingNodes, expandedIds],
+  );
 
   // Early return: headings가 없으면 렌더링하지 않음
   if (headings.length === 0) {
