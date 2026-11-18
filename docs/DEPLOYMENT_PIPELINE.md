@@ -5,9 +5,10 @@
 ## 전체 흐름
 
 1. **PR 단계 (`.github/workflows/ci.yml`)**
+   - `main` 브랜치에는 GitHub Ruleset(`protect-main`: 직접 push 차단, PR 필수, `verify` 통과 필수)이 적용되어 있습니다.
    - 이슈별 작업 브랜치(`feat/<id>-<slug>`, `fix/<id>-<slug>`, `chore/<id>-<slug>`)에서 PR을 생성합니다.
    - GitHub 호스티드 러너(`ubuntu-latest`)에서 `npm run verify` (`eslint` + `tsc --noEmit` + `vitest run`)와 `npm run build`를 검증합니다.
-   - AI 교차 리뷰(`review-github-pr`) 통과 후 `main`으로 머지합니다.
+   - AI 교차 리뷰(`review-github-pr`) `APPROVE`는 코드 리뷰 통과 신호일 뿐이며, **실제 `main` 머지는 사용자가 직접 수행하거나 PR 번호를 지정해 명시 승인한 경우에만 진행**합니다.
 
 2. **CI 검증 + Staging 자동 배포 (`.github/workflows/deploy.yml`)**
    - `main`에 머지(또는 `workflow_dispatch`)되면 먼저 `verify` 잡(`ubuntu-latest`)이 통과해야 다음 단계로 넘어갑니다.
@@ -19,7 +20,7 @@
 3. **수동 QA 및 Production 승격 (`environment: Production`)**
    - 스테이징 URL에서 실제 Notion 데이터·UI·라우트를 직접 확인합니다.
    - 이상이 없으면 GitHub Actions 실행 페이지에서 **`Production` 환경 승인(`Approve and deploy`)**을 누릅니다.
-   - `deploy-prod` 잡은 **재빌드 없이 스테이징에서 검증한 동일 `woongyee-blog:<git-sha>` 이미지**를 운영 컨테이너(`woongyee-blog`, `https://blog.woongyee.com`)로 승격(`--no-build`)합니다.
+   - `deploy-prod` 잡은 **재빌드 없이 스테이징에서 검증한 동일 `woongyee-blog:<git-sha>` 이미지**를 운영 컨테이너(`woongyee-blog`, `https://blog.woongyee.com`)로 승격(`--no-build`)하고, 운영 헬스체크 통과 후 `woongyee-blog-staging` 컨테이너를 자동으로 종료(`down`)합니다.
 
 4. **롤백**
    - `ys-home`에는 최근 3개의 `woongyee-blog:<git-sha>` 이미지가 유지되므로, 문제 발생 시 이전 정상 커밋에서 `deploy.yml`을 재실행하거나 `IMAGE_TAG=<prev-sha>`로 즉시 되돌릴 수 있습니다.

@@ -112,6 +112,15 @@ jobs:
           echo "https://blog.woongyee.com/test -> HTTP ${test_code}"
           test "$test_code" = "404"
 
+      - name: Tear down staging container after promotion
+        if: success()
+        run: |
+          docker compose \
+            --project-name woongyee-blog-staging \
+            --env-file "$PROD_ENV_FILE" \
+            -f docker-compose.staging.yml \
+            down --remove-orphans || true
+
       - name: Clean up old woongyee-blog images (keep latest 3 SHA tags)
         if: success()
         run: |

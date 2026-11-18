@@ -73,5 +73,7 @@ orca orchestration worker-start \
 
 - **If `Verdict: APPROVE`**:
   Optionally update the child worktree status and report all outcomes, PR URLs,
-  verification evidence, and merge readiness to the user. Do **not** merge to
-  `main` or deploy to production unless the user explicitly authorized it.
+  verification evidence, and merge readiness to the user, then **HARD STOP**.
+  **NEVER** run `gh pr merge` automatically after `APPROVE`—even if an earlier
+  turn mentioned deploying after issues are resolved. Wait for the user to merge
+  manually on GitHub (or explicitly confirm merging that specific PR number).
