@@ -24,7 +24,8 @@ Approval Gate** (`.github/workflows/deploy.yml`, documented in
    - `deploy-prod` (`environment: Production`, requires reviewer `wooongyee`):
      after manual QA on staging and approval in GitHub Actions, promotes the
      **exact same `woongyee-blog:<sha>` image** (`--no-build`) to `woongyee-blog`
-     (`https://blog.woongyee.com`)
+     (`https://blog.woongyee.com`) and automatically tears down
+     `woongyee-blog-staging` once production is healthy
    - `notify` (`ubuntu-latest`, `if: always()`): posts status to Slack when
      `secrets.SLACK_WEBHOOK_URL` is set
 2. Monitor the latest run from CLI:

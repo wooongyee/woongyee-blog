@@ -90,4 +90,5 @@ EOF
 
 If running as an **Orca Supervised Worker**, return the structured verdict
 (`APPROVE` or `REQUEST_CHANGES`), linked issue audit, and blocking findings (if
-any) via `worker_done`.
+any) via `worker_done`. Do **not** run `gh pr merge`; `APPROVE` only signals
+code-review readiness for the human operator's merge decision.

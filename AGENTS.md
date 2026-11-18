@@ -29,8 +29,9 @@ npm run verify   # runs: eslint && tsc --noEmit && vitest run
 
 GitHub Issues (`wooongyee/woongyee-blog`) are the single source of truth (SSOT) for tasks, plans, and progress across models (Antigravity, Claude, Codex). Do **not** create local ticket tracking files (`tasks/`, `backlog.md`, etc.).
 
-- **Branching**: Never commit or open PRs directly from `main`. Use `feat/<issue-number>-<slug>`, `fix/<issue-number>-<slug>`, or `chore/<issue-number>-<slug>`.
+- **Branching**: Never commit or push directly to `main` (enforced by GitHub Ruleset `protect-main`). Use `feat/<issue-number>-<slug>`, `fix/<issue-number>-<slug>`, or `chore/<issue-number>-<slug>`.
 - **PR Linking**: Every feature/bugfix PR must reference an existing issue with `Closes #<issue-number>`.
+- **Merge Hard-Stop**: AI `review-github-pr` `APPROVE` means code review passed — **never** run `gh pr merge` automatically after approval. Always stop, report the PR link and review summary, and wait for the user to merge manually (or explicitly confirm merging that specific PR number).
 - **Language**: Write GitHub issues, `> **🏗️ build-plan**` comments, PR descriptions, and PR reviews in **Korean** (keep technical identifiers, code symbols, and file paths in English/backticks).
 - **Skills** (`.agents/skills/`):
   - `create-github-issue`: Turn discussions into structured GitHub issues matching `.github/ISSUE_TEMPLATE/`.
@@ -38,7 +39,7 @@ GitHub Issues (`wooongyee/woongyee-blog`) are the single source of truth (SSOT) 
   - `create-github-pr`: Verify branch & `npm run verify`, push, open PR, and update Orca workspace status/references.
   - `review-github-pr`: Audit PR diff against linked issue Acceptance Criteria and post a structured review.
   - `orca-issue-pipeline`: Coordinator workflow to dispatch implementation and cross-model review via Orca workers.
-  - `deploy-homeserver`: Rebuild and deploy the container on `ys-home` via `seedops` after merging to `main`.
+  - `deploy-homeserver`: Monitor/verify GitHub Actions Build-Once Staging → `Production` approval CD on `ys-home`.
 
 ## Orca Dual-Mode Rules
 
